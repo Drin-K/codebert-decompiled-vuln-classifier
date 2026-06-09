@@ -1,0 +1,65 @@
+# Python environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+
+# Large binary inputs
+data/binaries/*
+!data/binaries/.gitkeep
+
+# Extracted and processed datasets
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+*.csv
+!data/**/demo*.csv
+!data/**/sample*.csv
+
+# Model checkpoints and training outputs
+outputs/models/*
+!outputs/models/.gitkeep
+*.pt
+*.pth
+*.bin
+*.safetensors
+checkpoint-*/
+runs/
+wandb/
+
+# Generated reports and figures
+outputs/reports/*
+!outputs/reports/.gitkeep
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
