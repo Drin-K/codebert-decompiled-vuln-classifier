@@ -53,6 +53,14 @@ outputs/reports/*
 *.jpeg
 *.pdf
 
+# Ghidra generated project files and logs
+*.gpr
+*.rep
+*.lock
+*.log
+ghidra_projects/
+*.gzf
+
 # Notebooks
 .ipynb_checkpoints/
 

@@ -78,3 +78,39 @@ python scripts/verify_environment.py
 ```
 
 Ghidra must be installed separately. See [docs/phase1_environment_setup.md](docs/phase1_environment_setup.md) for Ubuntu/Linux setup instructions, including Java, Ghidra GUI, Ghidra headless mode, and Google Colab GPU checks.
+
+## Phase 2: Ghidra Extraction
+
+Place local Linux ELF binaries in:
+
+```text
+data/binaries/
+```
+
+Raw Ghidra extraction CSVs are generated in:
+
+```text
+data/raw/
+```
+
+Run extraction for one binary:
+
+```bash
+python scripts/run_ghidra_extraction.py \
+  --binary data/binaries/simple_test \
+  --output data/raw/simple_test_functions.csv \
+  --ghidra-home /opt/ghidra \
+  --project-dir /tmp/ghidra_projects \
+  --project-name simple_test_project
+```
+
+Run extraction for all ELF binaries in `data/binaries/`:
+
+```bash
+python scripts/run_bulk_extraction.py \
+  --input-dir data/binaries \
+  --output-dir data/raw \
+  --ghidra-home /opt/ghidra
+```
+
+See [docs/phase2_ghidra_extraction.md](docs/phase2_ghidra_extraction.md) for details. Phase 2 only produces raw pseudo-C CSVs; labeling, cleaning, training, and evaluation come later.
