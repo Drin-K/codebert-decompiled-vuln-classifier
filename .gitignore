@@ -31,6 +31,7 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 *.csv
+!data/binaries_manifest.csv
 !data/**/demo*.csv
 !data/**/sample*.csv
 
@@ -71,3 +72,15 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+
+# Local source datasets
+data/source_datasets/**
+
+# Generated binaries
+data/binaries/**
+
+# Raw Ghidra extraction output
+data/raw/**
+
+# Keep folder placeholders
+!data/**/.gitkeep

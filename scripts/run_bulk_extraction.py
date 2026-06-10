@@ -49,13 +49,20 @@ def is_elf_file(path: Path) -> bool:
         return False
 
 
+def safe_name(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value)
+
+
 def safe_project_name(binary: Path) -> str:
-    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", binary.stem)
-    return f"{safe_name}_ghidra_project"
+    safe_binary_name = safe_name(binary.stem)
+    return f"{safe_binary_name}_ghidra_project"
 
 
-def output_csv_path(output_dir: Path, binary: Path) -> Path:
-    return output_dir / f"{binary.name}_functions.csv"
+def output_csv_path(output_dir: Path, input_dir: Path, binary: Path) -> Path:
+    relative_binary = binary.relative_to(input_dir)
+    relative_stem = relative_binary.with_suffix("").as_posix()
+    safe_relative_name = safe_name(relative_stem.replace("/", "_"))
+    return output_dir / f"{safe_relative_name}_functions.csv"
 
 
 def run_one_binary(
@@ -102,7 +109,7 @@ def main() -> int:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    binaries = sorted(path for path in input_dir.iterdir() if is_elf_file(path))
+    binaries = sorted(path for path in input_dir.rglob("*") if is_elf_file(path))
     if not binaries:
         print(f"No ELF binaries found in: {input_dir}")
         return 0
@@ -113,7 +120,7 @@ def main() -> int:
 
     for binary in binaries:
         processed += 1
-        output = output_csv_path(output_dir, binary)
+        output = output_csv_path(output_dir, input_dir, binary)
         return_code = run_one_binary(binary, output, ghidra_home, project_dir)
 
         if return_code == 0:
