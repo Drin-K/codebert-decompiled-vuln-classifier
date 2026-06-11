@@ -44,10 +44,10 @@ data/binaries_manifest.csv
 
 ## Compile Juliet Subset
 
-Example command:
+Example command using the same limit for every selected CWE:
 
 ```bash
-python scripts/compile_juliet_subset.py \
+python3 scripts/compile_juliet_subset.py \
   --juliet-root data/source_datasets/elfFILES \
   --output-dir data/binaries/juliet \
   --manifest data/binaries_manifest.csv \
@@ -56,10 +56,31 @@ python scripts/compile_juliet_subset.py \
   --debug-symbols
 ```
 
+For targeted dataset extension, use per-CWE limits:
+
+```bash
+python3 scripts/compile_juliet_subset.py \
+  --juliet-root data/source_datasets/elfFILES \
+  --output-dir data/binaries/juliet \
+  --manifest data/binaries_manifest.csv \
+  --cwe-limits CWE121=250,CWE122=250,CWE134=400,CWE190=400 \
+  --optimization -O0 \
+  --debug-symbols
+```
+
+When `--cwe-limits` is provided, all supported keys must be present:
+
+```text
+CWE121
+CWE122
+CWE134
+CWE190
+```
+
 Preview selected files and compile commands without compiling:
 
 ```bash
-python scripts/compile_juliet_subset.py --dry-run
+python3 scripts/compile_juliet_subset.py --dry-run
 ```
 
 ## Verify ELF Files
@@ -74,7 +95,7 @@ file $(find data/binaries/juliet -type f | head -n 5)
 After ELF binaries exist, run bulk extraction:
 
 ```bash
-python scripts/run_bulk_extraction.py \
+python3 scripts/run_bulk_extraction.py \
   --input-dir data/binaries/juliet \
   --output-dir data/raw \
   --ghidra-home /opt/ghidra

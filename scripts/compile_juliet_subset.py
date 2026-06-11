@@ -83,6 +83,7 @@ MANIFEST_COLUMNS = [
     "compile_status",
     "notes",
 ]
+SUPPORTED_CWE_LIMIT_KEYS = tuple(target.output_folder for target in TARGETS)
 
 
 def normalize_argv(argv: list[str]) -> list[str]:
@@ -106,6 +107,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="data/binaries/juliet")
     parser.add_argument("--manifest", default="data/binaries_manifest.csv")
     parser.add_argument("--limit-per-cwe", type=int, default=10)
+    parser.add_argument(
+        "--cwe-limits",
+        help=(
+            "Comma-separated per-CWE source limits, for example "
+            "CWE121=250,CWE122=250,CWE134=400,CWE190=400. "
+            "When provided, all supported CWE keys must be present."
+        ),
+    )
     parser.add_argument("--optimization", default="-O0")
     parser.add_argument("--debug-symbols", action="store_true")
     parser.add_argument("--strip", action="store_true")
@@ -189,9 +198,60 @@ def safe_binary_name(output_folder: str, source_path: Path) -> str:
     return f"juliet_{output_folder}_{safe_stem}"
 
 
+def parse_cwe_limits(cwe_limits_text: str) -> dict[str, int]:
+    limits: dict[str, int] = {}
+    supported = set(SUPPORTED_CWE_LIMIT_KEYS)
+
+    for item in cwe_limits_text.split(","):
+        item = item.strip()
+        if not item:
+            raise ValueError("empty item in --cwe-limits")
+        if "=" not in item:
+            raise ValueError(
+                f"invalid --cwe-limits item {item!r}; expected KEY=VALUE"
+            )
+
+        key, value_text = (part.strip() for part in item.split("=", 1))
+        if key not in supported:
+            supported_text = ", ".join(SUPPORTED_CWE_LIMIT_KEYS)
+            raise ValueError(
+                f"unknown CWE key {key!r}; supported keys are: {supported_text}"
+            )
+        if key in limits:
+            raise ValueError(f"duplicate CWE key {key!r} in --cwe-limits")
+
+        try:
+            value = int(value_text)
+        except ValueError as exc:
+            raise ValueError(
+                f"limit for {key} must be an integer, got {value_text!r}"
+            ) from exc
+
+        if value <= 0:
+            raise ValueError(f"limit for {key} must be greater than zero")
+
+        limits[key] = value
+
+    missing = [key for key in SUPPORTED_CWE_LIMIT_KEYS if key not in limits]
+    if missing:
+        missing_text = ", ".join(missing)
+        raise ValueError(
+            "missing CWE limit(s): "
+            f"{missing_text}. Provide all supported keys when using --cwe-limits."
+        )
+
+    return limits
+
+
+def compile_limits(limit_per_cwe: int, cwe_limits_text: str | None) -> dict[str, int]:
+    if cwe_limits_text is not None:
+        return parse_cwe_limits(cwe_limits_text)
+    return {target.output_folder: limit_per_cwe for target in TARGETS}
+
+
 def selected_sources(
     juliet_root: Path,
-    limit_per_cwe: int,
+    limits_by_cwe: dict[str, int],
 ) -> dict[str, list[Path]]:
     selected: dict[str, list[Path]] = {}
 
@@ -207,7 +267,8 @@ def selected_sources(
             if path.is_file() and is_eligible_source(path)
         ]
         candidates.sort(key=lambda path: source_sort_key(path, target.prefer_c))
-        selected[target.output_folder] = candidates[:limit_per_cwe]
+        limit = limits_by_cwe[target.output_folder]
+        selected[target.output_folder] = candidates[:limit]
 
     return selected
 
@@ -465,6 +526,12 @@ def main() -> int:
     if args.limit_per_cwe < 0:
         print("ERROR: --limit-per-cwe must be zero or greater.")
         return 1
+    try:
+        limits_by_cwe = compile_limits(args.limit_per_cwe, args.cwe_limits)
+    except ValueError as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
     if not juliet_root.exists():
         print(f"ERROR: Juliet root does not exist: {juliet_root}")
         return 1
@@ -481,7 +548,7 @@ def main() -> int:
         support_dirs.insert(0, required_support_dir)
 
     io_c = find_io_c(support_dirs)
-    selected = selected_sources(juliet_root, args.limit_per_cwe)
+    selected = selected_sources(juliet_root, limits_by_cwe)
 
     target_by_output = {target.output_folder: target for target in TARGETS}
     plans: list[CompilePlan] = []
