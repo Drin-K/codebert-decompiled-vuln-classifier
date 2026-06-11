@@ -30,6 +30,8 @@ class CompilePlan:
     target: CweTarget
     output_path: Path
     harness_path: Path
+    support_object_path: Path | None
+    io_c_path: Path | None
     compiler: str
     command: list[str]
 
@@ -225,6 +227,11 @@ def build_compile_plan(
     output_path = output_dir / target.output_folder / binary_name
     harness_suffix = ".main.cpp" if source_path.suffix.lower() == ".cpp" else ".main.c"
     harness_path = output_path.with_suffix(harness_suffix)
+    support_object_path = (
+        output_path.with_suffix(".io.o")
+        if io_c is not None and source_path.suffix.lower() == ".cpp"
+        else None
+    )
 
     include_dirs = [source_path.parent, juliet_root, *support_dirs]
     deduped_include_dirs = list(dict.fromkeys(include_dirs))
@@ -240,6 +247,8 @@ def build_compile_plan(
     command.append(str(harness_path))
     if io_c is not None and source_path.suffix.lower() == ".c":
         command.append(str(io_c))
+    if support_object_path is not None:
+        command.append(str(support_object_path))
 
     command.extend(["-o", str(output_path)])
 
@@ -248,6 +257,8 @@ def build_compile_plan(
         target=target,
         output_path=output_path,
         harness_path=harness_path,
+        support_object_path=support_object_path,
+        io_c_path=io_c,
         compiler=compiler,
         command=command,
     )
@@ -329,6 +340,30 @@ def write_manifest(manifest_path: Path, new_rows: list[dict[str, str]]) -> None:
 
 def harness_code(plan: CompilePlan) -> str:
     function_prefix = plan.source_path.stem
+    if plan.source_path.suffix.lower() == ".cpp":
+        return "\n".join(
+            [
+                "/* Auto-generated temporary Juliet harness for static compilation. */",
+                "#include \"std_testcase.h\"",
+                "",
+                f"namespace {function_prefix}",
+                "{",
+                "    void bad();",
+                "    void good();",
+                "}",
+                "",
+                "int main(int argc, char **argv)",
+                "{",
+                "    globalArgc = argc;",
+                "    globalArgv = argv;",
+                f"    {function_prefix}::bad();",
+                f"    {function_prefix}::good();",
+                "    return 0;",
+                "}",
+                "",
+            ]
+        )
+
     return "\n".join(
         [
             "/* Auto-generated temporary Juliet harness for static compilation. */",
@@ -356,6 +391,29 @@ def compile_plan(plan: CompilePlan, strip_binary: bool) -> tuple[str, str, str]:
     plan.harness_path.write_text(harness_code(plan), encoding="utf-8")
 
     try:
+        if plan.support_object_path is not None and plan.io_c_path is not None:
+            support_result = subprocess.run(
+                [
+                    "gcc",
+                    "-c",
+                    str(plan.io_c_path),
+                    "-o",
+                    str(plan.support_object_path),
+                    "-I",
+                    str(plan.io_c_path.parent),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if support_result.returncode != 0:
+                return (
+                    "failed",
+                    "support io.c compile failed: "
+                    + short_error_summary(support_result.stderr, support_result.stdout),
+                    "",
+                )
+
         result = subprocess.run(
             plan.command,
             check=False,
@@ -364,6 +422,8 @@ def compile_plan(plan: CompilePlan, strip_binary: bool) -> tuple[str, str, str]:
         )
     finally:
         plan.harness_path.unlink(missing_ok=True)
+        if plan.support_object_path is not None:
+            plan.support_object_path.unlink(missing_ok=True)
 
     if result.returncode != 0:
         return "failed", short_error_summary(result.stderr, result.stdout), ""
