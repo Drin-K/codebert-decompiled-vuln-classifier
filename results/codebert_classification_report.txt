@@ -1,0 +1,32 @@
+CodeBERT Fine-Tuning Classification Report
+
+Label mapping:
+0 = Clean
+1 = Buffer Overflow
+2 = Format String
+3 = Integer Overflow
+
+Validation classification report:
+                      precision    recall  f1-score   support
+
+           0 = Clean       1.00      1.00      1.00        39
+ 1 = Buffer Overflow       1.00      1.00      1.00        39
+   2 = Format String       1.00      1.00      1.00        39
+3 = Integer Overflow       1.00      1.00      1.00        39
+
+            accuracy                           1.00       156
+           macro avg       1.00      1.00      1.00       156
+        weighted avg       1.00      1.00      1.00       156
+
+
+Test classification report:
+                      precision    recall  f1-score   support
+
+           0 = Clean       0.97      1.00      0.99        39
+ 1 = Buffer Overflow       1.00      1.00      1.00        39
+   2 = Format String       1.00      0.97      0.99        39
+3 = Integer Overflow       1.00      1.00      1.00        39
+
+            accuracy                           0.99       156
+           macro avg       0.99      0.99      0.99       156
+        weighted avg       0.99      0.99      0.99       156
