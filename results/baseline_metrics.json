@@ -1,0 +1,112 @@
+{
+  "class_names": {
+    "0": "Clean",
+    "1": "Buffer Overflow",
+    "2": "Format String",
+    "3": "Integer Overflow"
+  },
+  "hyperparameters": {
+    "logistic_regression": {
+      "class_weight": null,
+      "max_iter": 2000,
+      "random_state": 42,
+      "solver": "lbfgs"
+    },
+    "tfidf": {
+      "analyzer": "word",
+      "lowercase": false,
+      "max_df": 0.95,
+      "max_features": 50000,
+      "min_df": 1,
+      "ngram_range": [
+        1,
+        2
+      ],
+      "token_pattern": "(?u)\\b\\w+\\b"
+    }
+  },
+  "model_name": "TF-IDF + Logistic Regression",
+  "test_accuracy": 0.8397435897435898,
+  "test_macro_f1": 0.8279438868869763,
+  "test_metrics": {
+    "accuracy": 0.8397435897435898,
+    "macro_f1": 0.8279438868869763,
+    "macro_precision": 0.832959224238294,
+    "macro_recall": 0.8397435897435896,
+    "per_class": {
+      "0": {
+        "class_name": "Clean",
+        "f1": 0.6153846153846154,
+        "precision": 0.7692307692307693,
+        "recall": 0.5128205128205128,
+        "support": 39
+      },
+      "1": {
+        "class_name": "Buffer Overflow",
+        "f1": 0.8780487804878049,
+        "precision": 0.8372093023255814,
+        "recall": 0.9230769230769231,
+        "support": 39
+      },
+      "2": {
+        "class_name": "Format String",
+        "f1": 0.9047619047619048,
+        "precision": 0.8444444444444444,
+        "recall": 0.9743589743589743,
+        "support": 39
+      },
+      "3": {
+        "class_name": "Integer Overflow",
+        "f1": 0.9135802469135802,
+        "precision": 0.8809523809523809,
+        "recall": 0.9487179487179487,
+        "support": 39
+      }
+    },
+    "weighted_f1": 0.8279438868869763
+  },
+  "test_size": 156,
+  "test_weighted_f1": 0.8279438868869763,
+  "timestamp": "2026-06-12T18:39:58.632237+00:00",
+  "train_size": 728,
+  "validation_accuracy": 0.8653846153846154,
+  "validation_macro_f1": 0.852212470005158,
+  "validation_metrics": {
+    "accuracy": 0.8653846153846154,
+    "macro_f1": 0.852212470005158,
+    "macro_precision": 0.8738426376989361,
+    "macro_recall": 0.8653846153846154,
+    "per_class": {
+      "0": {
+        "class_name": "Clean",
+        "f1": 0.6557377049180327,
+        "precision": 0.9090909090909091,
+        "recall": 0.5128205128205128,
+        "support": 39
+      },
+      "1": {
+        "class_name": "Buffer Overflow",
+        "f1": 0.8604651162790697,
+        "precision": 0.7872340425531915,
+        "recall": 0.9487179487179487,
+        "support": 39
+      },
+      "2": {
+        "class_name": "Format String",
+        "f1": 0.9176470588235294,
+        "precision": 0.8478260869565217,
+        "recall": 1.0,
+        "support": 39
+      },
+      "3": {
+        "class_name": "Integer Overflow",
+        "f1": 0.975,
+        "precision": 0.9512195121951219,
+        "recall": 1.0,
+        "support": 39
+      }
+    },
+    "weighted_f1": 0.852212470005158
+  },
+  "validation_size": 156
+}

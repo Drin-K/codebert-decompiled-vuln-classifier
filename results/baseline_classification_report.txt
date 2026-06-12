@@ -1,0 +1,32 @@
+TF-IDF + Logistic Regression Baseline
+
+Label mapping:
+0 = Clean
+1 = Buffer Overflow
+2 = Format String
+3 = Integer Overflow
+
+Validation classification report:
+                      precision    recall  f1-score   support
+
+           0 = Clean       0.91      0.51      0.66        39
+ 1 = Buffer Overflow       0.79      0.95      0.86        39
+   2 = Format String       0.85      1.00      0.92        39
+3 = Integer Overflow       0.95      1.00      0.97        39
+
+            accuracy                           0.87       156
+           macro avg       0.87      0.87      0.85       156
+        weighted avg       0.87      0.87      0.85       156
+
+
+Test classification report:
+                      precision    recall  f1-score   support
+
+           0 = Clean       0.77      0.51      0.62        39
+ 1 = Buffer Overflow       0.84      0.92      0.88        39
+   2 = Format String       0.84      0.97      0.90        39
+3 = Integer Overflow       0.88      0.95      0.91        39
+
+            accuracy                           0.84       156
+           macro avg       0.83      0.84      0.83       156
+        weighted avg       0.83      0.84      0.83       156
