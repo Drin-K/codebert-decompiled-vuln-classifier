@@ -1,0 +1,35 @@
+{
+  "baseline_metrics": {
+    "model_name": "TF-IDF + Logistic Regression",
+    "validation_accuracy": 0.8653846153846154,
+    "validation_macro_f1": 0.852212470005158,
+    "test_accuracy": 0.8397435897435898,
+    "test_macro_f1": 0.8279438868869763,
+    "test_weighted_f1": 0.8279438868869763,
+    "train_size": 728,
+    "validation_size": 156,
+    "test_size": 156
+  },
+  "codebert_metrics": {
+    "model_name": "microsoft/codebert-base",
+    "validation_accuracy": 1.0,
+    "validation_macro_f1": 1.0,
+    "test_accuracy": 0.9935897435897436,
+    "test_macro_f1": 0.9935886897912214,
+    "test_weighted_f1": 0.9935886897912215,
+    "train_size": 728,
+    "validation_size": 156,
+    "test_size": 156
+  },
+  "absolute_improvements": {
+    "test_accuracy": 0.15384615384615385,
+    "test_macro_f1": 0.1656448029042451,
+    "test_weighted_f1": 0.16564480290424521
+  },
+  "relative_improvements_percent": {
+    "test_accuracy_percent": 18.3206106870229,
+    "test_macro_f1_percent": 20.00676682656122
+  },
+  "timestamp": "2026-06-13T11:03:08.653534+00:00",
+  "short_interpretation": "The fine-tuned CodeBERT model substantially outperformed the TF-IDF + Logistic Regression baseline on the test set."
+}
