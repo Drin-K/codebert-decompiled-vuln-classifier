@@ -1,0 +1,67 @@
+function_code,final_label,final_class,suggested_label,suggested_class,label_confidence,label_reason,review_status,sanity_check_status,sanity_check_reason,final_decision,exclude_reason,binary_name,function_name,function_address,source_csv,inferred_cwe,source_type,code_line_count,code_char_count,normalized_code_hash,true_label,true_class,predicted_label,predicted_class,confidence,is_correct
+"
+void badVaSinkB(char *data,...)
+
+{
+  long lVar1;
+  char in_AL;
+  undefined8 in_RCX;
+  undefined8 in_RDX;
+  undefined8 in_RSI;
+  undefined8 in_R8;
+  undefined8 in_R9;
+  long in_FS_OFFSET;
+  undefined8 in_XMM0_Qa;
+  undefined8 in_XMM1_Qa;
+  undefined8 in_XMM2_Qa;
+  undefined8 in_XMM3_Qa;
+  undefined8 in_XMM4_Qa;
+  undefined8 in_XMM5_Qa;
+  undefined8 in_XMM6_Qa;
+  undefined8 in_XMM7_Qa;
+  char *data_local;
+  va_list args;
+  undefined1 local_b8 [8];
+  undefined8 local_b0;
+  undefined8 local_a8;
+  undefined8 local_a0;
+  undefined8 local_98;
+  undefined8 local_90;
+  undefined8 local_88;
+  undefined8 local_78;
+  undefined8 local_68;
+  undefined8 local_58;
+  undefined8 local_48;
+  undefined8 local_38;
+  undefined8 local_28;
+  undefined8 local_18;
+  
+  if (in_AL != '\0') {
+    local_88 = in_XMM0_Qa;
+    local_78 = in_XMM1_Qa;
+    local_68 = in_XMM2_Qa;
+    local_58 = in_XMM3_Qa;
+    local_48 = in_XMM4_Qa;
+    local_38 = in_XMM5_Qa;
+    local_28 = in_XMM6_Qa;
+    local_18 = in_XMM7_Qa;
+  }
+  lVar1 = *(long *)(in_FS_OFFSET + 0x28);
+  args[0].gp_offset = 8;
+  args[0].fp_offset = 0x30;
+  args[0].overflow_arg_area = &stack0x00000008;
+  args[0].reg_save_area = local_b8;
+  local_b0 = in_RSI;
+  local_a8 = in_RDX;
+  local_a0 = in_RCX;
+  local_98 = in_R8;
+  local_90 = in_R9;
+  vprintf(data,args);
+  if (lVar1 != *(long *)(in_FS_OFFSET + 0x28)) {
+                    /* WARNING: Subroutine does not return */
+    __stack_chk_fail();
+  }
+  return;
+}
+
+",2,Format String,2,Format String,medium,CWE-134 metadata maps to Format String and Juliet bad-function naming pattern,suggested,passed,Visible format-string sink using a non-literal format argument,include,,juliet_CWE134_CWE134_Uncontrolled_Format_String__char_connect_socket_vprintf_02,badVaSinkB,00101389,data/raw/CWE134_juliet_CWE134_CWE134_Uncontrolled_Format_String__char_connect_socket_vprintf_02_functions.csv,CWE-134,Juliet,61,1449,c368599c802b0c6c142c2a02c7dc2249a4b1c2a1f5a33c5a4a217562c6a0f474,2,Format String,0,Clean,0.7097214460372925,False
