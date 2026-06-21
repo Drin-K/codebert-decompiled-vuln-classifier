@@ -84,3 +84,15 @@ data/raw/**
 
 # Keep folder placeholders
 !data/**/.gitkeep
+
+# Local Phase 11 web-demo runtime files
+web-demo/backend/node_modules/
+web-demo/frontend/node_modules/
+web-demo/backend/uploads/*
+!web-demo/backend/uploads/.gitkeep
+results/web_demo/
+
+# Reproducible Phase 11 demo binaries and their generated reports
+data/demo/*
+!data/demo/.gitkeep
+results/demo_candidates/

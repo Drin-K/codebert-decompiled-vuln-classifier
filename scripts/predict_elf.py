@@ -33,10 +33,33 @@ ID2LABEL = {
     2: "Format String",
     3: "Integer Overflow",
 }
+RUNTIME_OR_LIBRARY_FUNCTIONS = {
+    "_start", "_init", "_fini", "_dl_relocate_static_pie", "deregister_tm_clones",
+    "register_tm_clones", "__do_global_dtors_aux", "frame_dummy", "__libc_start_main",
+    "__cxa_finalize", "__stack_chk_fail", "__gmon_start__", "_global_offset_table_",
+}
 
 
 class Phase11Error(RuntimeError):
     """A clear, user-facing Phase 11 failure."""
+
+
+def is_runtime_or_library_function(function_name: str) -> bool:
+    """Exclude known non-user functions only from presentation-layer highlights."""
+    name = function_name.strip().lower()
+    return (
+        name in RUNTIME_OR_LIBRARY_FUNCTIONS
+        or name.startswith("__")
+        or name.startswith("fun_")
+        or name.startswith("thunk_")
+        or name.startswith("plt_")
+        or name.startswith("imp_")
+        or name.endswith("@plt")
+    )
+
+
+def is_highlight_candidate(row: dict[str, Any]) -> bool:
+    return row["predicted_label"] != 0 and not is_runtime_or_library_function(row["function_name"])
 
 
 def parse_args() -> argparse.Namespace:
@@ -281,7 +304,7 @@ def save_outputs(
         json.dump({"metadata": metadata, "predictions": predictions}, handle, indent=2)
         handle.write("\n")
 
-    suspicious = sorted((row for row in predictions if row["predicted_label"] != 0), key=lambda row: row["confidence"], reverse=True)[:10]
+    suspicious = sorted((row for row in predictions if is_highlight_candidate(row)), key=lambda row: row["confidence"], reverse=True)[:10]
     lines = [
         "# Phase 11 ELF Prediction Demo", "", f"- Binary analyzed: `{binary}`", f"- Model path: `{model_dir}`",
         f"- Device used: `{device}`", f"- Total functions extracted: {extracted_count}",
@@ -292,7 +315,7 @@ def save_outputs(
     if suspicious:
         lines.extend(f"| {row['function_name']} | {row['predicted_label_name']} | {row['confidence']:.4f} |" for row in suspicious)
     else:
-        lines.append("| No non-Clean predictions | — | — |")
+        lines.append("| No non-Clean user-code candidates | — | — |")
     lines.extend([
         "", "## Output Files", "", f"- `{csv_path}`", f"- `{json_path}`", f"- `{markdown_path}`",
         "", "## Limitation", "", "This model classifies vulnerability candidates in Ghidra-decompiled pseudo-C functions and does not prove real-world exploitability.", "",
@@ -322,7 +345,7 @@ def print_summary(
         print(f"{label}: {distribution.get(label, 0)}")
     print("\nTop vulnerability candidates:")
     suspicious = sorted(
-        (row for row in predictions if row["predicted_label"] != 0),
+        (row for row in predictions if is_highlight_candidate(row)),
         key=lambda row: row["confidence"],
         reverse=True,
     )[:top_k]
@@ -333,7 +356,7 @@ def print_summary(
                 f"confidence: {row['confidence']:.2%} | address: {row['function_address']}"
             )
     else:
-        print("No non-clean vulnerability candidates were predicted.")
+        print("No non-clean user-code vulnerability candidates were predicted.")
     if show_functions:
         print("\nAll function predictions:")
         print(f"{'Function name':<32} {'Address':<18} {'Prediction':<20} Confidence")
