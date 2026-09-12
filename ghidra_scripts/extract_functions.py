@@ -38,6 +38,27 @@ def open_csv_for_write(output_path):
     return open(output_path, "wb")
 
 
+def function_provenance(function):
+    """Return Ghidra-native signals for conservative inference filtering."""
+    try:
+        is_external = bool(function.isExternal())
+    except Exception:
+        is_external = False
+    try:
+        is_thunk = bool(function.isThunk())
+    except Exception:
+        is_thunk = False
+
+    memory_block = ""
+    try:
+        block = currentProgram.getMemory().getBlock(function.getEntryPoint())
+        if block is not None:
+            memory_block = str(block.getName())
+    except Exception:
+        pass
+    return memory_block, is_external, is_thunk
+
+
 def main():
     output_path = get_output_path()
     output_dir = os.path.dirname(output_path)
@@ -64,6 +85,9 @@ def main():
                 "function_address",
                 "function_code",
                 "decompile_status",
+                "memory_block",
+                "is_external",
+                "is_thunk",
             ]
         )
 
@@ -72,6 +96,7 @@ def main():
 
             function_name = function.getName()
             function_address = str(function.getEntryPoint())
+            memory_block, is_external, is_thunk = function_provenance(function)
 
             try:
                 function_code, decompile_status = decompile_function(
@@ -93,6 +118,9 @@ def main():
                     function_address,
                     function_code,
                     decompile_status,
+                    memory_block,
+                    str(is_external),
+                    str(is_thunk),
                 ]
             )
 

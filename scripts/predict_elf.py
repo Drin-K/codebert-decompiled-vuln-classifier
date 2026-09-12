@@ -22,6 +22,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from clean_functions import inference_exclusion_reason
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GHIDRA_SCRIPT_DIR = REPO_ROOT / "ghidra_scripts"
@@ -50,7 +52,6 @@ def is_runtime_or_library_function(function_name: str) -> bool:
     return (
         name in RUNTIME_OR_LIBRARY_FUNCTIONS
         or name.startswith("__")
-        or name.startswith("fun_")
         or name.startswith("thunk_")
         or name.startswith("plt_")
         or name.startswith("imp_")
@@ -59,7 +60,11 @@ def is_runtime_or_library_function(function_name: str) -> bool:
 
 
 def is_highlight_candidate(row: dict[str, Any]) -> bool:
-    return row["predicted_label"] != 0 and not is_runtime_or_library_function(row["function_name"])
+    return (
+        row.get("classification_status") == "classified"
+        and row.get("predicted_label") != 0
+        and not is_runtime_or_library_function(row["function_name"])
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -207,20 +212,27 @@ def load_extracted_functions(extracted_csv: Path, binary: Path) -> tuple[list[di
             row["binary_path"] = str(binary)
             records.append(row)
 
-    # Persist an enriched extraction file so it is useful independently of prediction output.
-    fieldnames = ["binary_name", "binary_path", "function_name", "function_address", "function_code", "decompile_status"]
+    eligible = []
+    for row in records:
+        reason = inference_exclusion_reason(row)
+        row["classification_status"] = "excluded" if reason else "classified"
+        row["exclusion_reason"] = reason
+        if not reason:
+            eligible.append(row)
+
+    # Preserve every extracted function and record why any row skipped inference.
+    fieldnames = [
+        "binary_name", "binary_path", "function_name", "function_address",
+        "function_code", "decompile_status", "memory_block", "is_external", "is_thunk",
+        "classification_status", "exclusion_reason",
+    ]
     with extracted_csv.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(records)
-
-    usable = [
-        row for row in records
-        if row.get("decompile_status") == "success" and row.get("function_code", "").strip()
-    ]
-    if not usable:
-        raise Phase11Error("No successfully decompiled functions with pseudo-C code were extracted.")
-    return records, usable
+    if not eligible:
+        raise Phase11Error("No extracted functions passed the inference eligibility checks.")
+    return records, eligible
 
 
 class FunctionDataset(Dataset[dict[str, str]]):
@@ -271,11 +283,27 @@ def predict(
                     "binary_name": row["binary_name"], "binary_path": row["binary_path"],
                     "function_name": row["function_name"], "function_address": row["function_address"],
                     "function_code": row["function_code"], "decompile_status": row["decompile_status"],
+                    "memory_block": row.get("memory_block", ""),
+                    "is_external": row.get("is_external", ""), "is_thunk": row.get("is_thunk", ""),
+                    "classification_status": "classified", "exclusion_reason": "",
                     "predicted_label": label, "predicted_label_name": ID2LABEL[label],
                     "confidence": float(scores[label]),
                     "probabilities": {ID2LABEL[index]: float(score) for index, score in enumerate(scores)},
                 })
     return predictions
+
+
+def excluded_prediction(row: dict[str, str]) -> dict[str, Any]:
+    return {
+        "binary_name": row["binary_name"], "binary_path": row["binary_path"],
+        "function_name": row["function_name"], "function_address": row["function_address"],
+        "function_code": row["function_code"], "decompile_status": row["decompile_status"],
+        "memory_block": row.get("memory_block", ""),
+        "is_external": row.get("is_external", ""), "is_thunk": row.get("is_thunk", ""),
+        "classification_status": "excluded", "exclusion_reason": row["exclusion_reason"],
+        "predicted_label": None, "predicted_label_name": "Not classified",
+        "confidence": None, "probabilities": {},
+    }
 
 
 def save_outputs(
@@ -285,9 +313,12 @@ def save_outputs(
     csv_path = output_dir / "elf_predictions.csv"
     json_path = output_dir / "elf_predictions.json"
     markdown_path = output_dir / "summary.md"
-    distribution: Counter[str] = Counter(row["predicted_label_name"] for row in predictions)
+    classified = [row for row in predictions if row["classification_status"] == "classified"]
+    excluded = [row for row in predictions if row["classification_status"] == "excluded"]
+    distribution: Counter[str] = Counter(row["predicted_label_name"] for row in classified)
+    exclusion_counts: Counter[str] = Counter(row["exclusion_reason"] for row in excluded)
 
-    csv_fields = ["binary_name", "binary_path", "function_name", "function_address", "predicted_label", "predicted_label_name", "confidence", "function_code", "decompile_status"]
+    csv_fields = ["binary_name", "binary_path", "function_name", "function_address", "memory_block", "is_external", "is_thunk", "classification_status", "exclusion_reason", "predicted_label", "predicted_label_name", "confidence", "function_code", "decompile_status"]
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=csv_fields)
         writer.writeheader()
@@ -297,20 +328,28 @@ def save_outputs(
     metadata = {
         "phase": "Phase 11 ELF Prediction Demo", "binary": str(binary), "model_dir": str(model_dir),
         "device": str(device), "total_functions_extracted": extracted_count,
-        "total_functions_predicted": len(predictions), "class_distribution": dict(distribution),
+        "total_functions_classified": len(classified), "total_functions_excluded": len(excluded),
+        "total_functions_predicted": len(classified), "class_distribution": dict(distribution),
+        "exclusion_reasons": dict(exclusion_counts),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     with json_path.open("w", encoding="utf-8") as handle:
         json.dump({"metadata": metadata, "predictions": predictions}, handle, indent=2)
         handle.write("\n")
 
-    suspicious = sorted((row for row in predictions if is_highlight_candidate(row)), key=lambda row: row["confidence"], reverse=True)[:10]
+    suspicious = sorted((row for row in classified if is_highlight_candidate(row)), key=lambda row: row["confidence"], reverse=True)[:10]
     lines = [
         "# Phase 11 ELF Prediction Demo", "", f"- Binary analyzed: `{binary}`", f"- Model path: `{model_dir}`",
         f"- Device used: `{device}`", f"- Total functions extracted: {extracted_count}",
-        f"- Total functions predicted: {len(predictions)}", "", "## Class Distribution", "",
+        f"- Total functions classified: {len(classified)}", f"- Total functions excluded: {len(excluded)}",
+        "", "## Class Distribution (Classified Functions Only)", "",
     ]
     lines.extend(f"- {label}: {distribution.get(label, 0)}" for label in ID2LABEL.values())
+    lines.extend(["", "## Excluded From Classification", ""])
+    if exclusion_counts:
+        lines.extend(f"- {reason}: {count}" for reason, count in exclusion_counts.most_common())
+    else:
+        lines.append("- None")
     lines.extend(["", "## Top Suspicious Functions", "", "| Function | Predicted class | Confidence |", "|---|---|---:|"])
     if suspicious:
         lines.extend(f"| {row['function_name']} | {row['predicted_label_name']} | {row['confidence']:.4f} |" for row in suspicious)
@@ -395,16 +434,25 @@ def main() -> int:
         )
         print("[OK] Ghidra extraction completed")
         print("\n[3/6] Loading extracted pseudo-C functions...")
-        extracted, usable = load_extracted_functions(extracted_csv, binary)
-        print(f"[OK] Extracted {len(extracted)} functions; {len(usable)} have usable pseudo-C")
+        extracted, eligible = load_extracted_functions(extracted_csv, binary)
+        print(f"[OK] Extracted {len(extracted)} functions; {len(eligible)} passed inference eligibility checks")
         print("\n[4/6] Loading fine-tuned CodeBERT model...")
         tokenizer, model = load_model(model_dir, device)
         print("[OK] Model loaded successfully")
         print(f"[INFO] Running on {device}")
         print("\n[5/6] Classifying functions...")
         print("[WORKING] Predicting vulnerability class per function...")
-        predictions = predict(usable, tokenizer, model, device, args.max_length, args.batch_size)
-        print(f"[OK] {len(predictions)} functions classified")
+        classified = predict(eligible, tokenizer, model, device, args.max_length, args.batch_size)
+        classified_by_identity = {
+            (row["function_address"], row["function_name"]): row for row in classified
+        }
+        predictions = [
+            classified_by_identity.get(
+                (row["function_address"], row["function_name"]), excluded_prediction(row)
+            )
+            for row in extracted
+        ]
+        print(f"[OK] {len(classified)} functions classified; {len(extracted) - len(classified)} excluded")
         print("\n[6/6] Writing reports...")
         csv_path, json_path, markdown_path, distribution = save_outputs(predictions, len(extracted), binary, model_dir, output_dir, device)
         print("[OK] CSV saved")

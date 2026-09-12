@@ -15,6 +15,8 @@ BOILERPLATE_FUNCTION_NAMES = {
     "_init",
     "_fini",
     "_start",
+    "_dl_relocate_static_pie",
+    "_global_offset_table_",
     "__libc_start_main",
     "__cxa_finalize",
     "__stack_chk_fail",
@@ -105,6 +107,56 @@ def first_removal_reason(
         return "too_few_code_characters"
     if code_hash in seen_hashes:
         return "duplicate_normalized_function_body"
+    return ""
+
+
+def inference_exclusion_reason(row: dict[str, str]) -> str:
+    """Return a conservative reason a function should skip inference.
+
+    Only unusable decompilations, explicitly named runtime functions, and strong
+    import/thunk indicators are excluded. Short functions, ``FUN_*`` functions,
+    ambiguous wrappers, duplicates, and unusual compiler output remain eligible
+    because they may contain genuine user-code vulnerabilities.
+    """
+    function_name = row.get("function_name", "").strip()
+    normalized_name = function_name.lower()
+    function_code = row.get("function_code", "")
+    memory_block = row.get("memory_block", "").strip().lower()
+    is_external = row.get("is_external", "").strip().lower() in {"true", "1", "yes"}
+    is_thunk = row.get("is_thunk", "").strip().lower() in {"true", "1", "yes"}
+    has_ghidra_provenance = any(
+        column in row for column in ("memory_block", "is_external", "is_thunk")
+    )
+
+    if row.get("decompile_status", "") != "success":
+        return "non_success_decompile_status"
+    if not function_code.strip():
+        return "empty_function_code"
+    if "halt_baddata()" in function_code:
+        return "confirmed_import_stub"
+    if function_name in BOILERPLATE_FUNCTION_NAMES:
+        return "compiler_runtime_boilerplate"
+    if is_external:
+        return "ghidra_external_function"
+    if is_thunk:
+        return "ghidra_thunk_function"
+    if memory_block.startswith(".plt"):
+        return "ghidra_plt_function"
+    if (
+        normalized_name.startswith("__imp_")
+        or normalized_name.startswith("imp_")
+        or normalized_name.startswith("thunk_")
+        or normalized_name.startswith("plt_")
+        or normalized_name.endswith("@plt")
+    ):
+        return "confirmed_import_or_thunk"
+    if (
+        not has_ghidra_provenance
+        and "PTR_" in function_code
+        and "(*(code *)" in function_code
+        and len(non_empty_code_lines(function_code)) <= 12
+    ):
+        return "legacy_plt_wrapper_pattern"
     return ""
 
 

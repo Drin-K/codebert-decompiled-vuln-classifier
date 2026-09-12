@@ -5,7 +5,9 @@ const matches = (code: string, expression: RegExp) => expression.test(code);
 export function addHeuristicExplanation(prediction: PredictionDto): PredictionDto {
   const code = prediction.function_code ?? '';
   const signals: string[] = [];
-  const confidence = `${(prediction.confidence * 100).toFixed(2)}%`;
+  const confidence = prediction.confidence == null
+    ? 'unavailable confidence'
+    : `${(prediction.confidence * 100).toFixed(2)}%`;
 
   if (prediction.predicted_label_name === 'Buffer Overflow') {
     if (matches(code, /\b(strcpy|strcat|sprintf|vsprintf|gets)\s*\(/i)) signals.push('Detected a copy- or format-like call without an explicit bound in its name.');

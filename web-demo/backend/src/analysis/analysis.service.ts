@@ -10,6 +10,8 @@ interface ScriptOutput {
   metadata?: {
     binary?: string;
     total_functions_extracted?: number;
+    total_functions_classified?: number;
+    total_functions_excluded?: number;
     total_functions_predicted?: number;
     class_distribution?: Record<string, number>;
   };
@@ -32,9 +34,9 @@ const runtimeOrLibraryFunctions = new Set([
 const isHighlightCandidate = (prediction: PredictionDto) => {
   const name = prediction.function_name.trim().toLowerCase();
   const nonUserFunction = runtimeOrLibraryFunctions.has(name) || name.startsWith('__') ||
-    name.startsWith('fun_') || name.startsWith('thunk_') || name.startsWith('plt_') ||
+    name.startsWith('thunk_') || name.startsWith('plt_') ||
     name.startsWith('imp_') || name.endsWith('@plt');
-  return prediction.predicted_label !== 0 && !nonUserFunction;
+  return prediction.classification_status === 'classified' && prediction.predicted_label !== 0 && !nonUserFunction;
 };
 
 @Injectable()
@@ -93,17 +95,27 @@ export class AnalysisService {
       });
     }
 
-    const predictions = output.predictions.map(addHeuristicExplanation);
+    const allPredictions = output.predictions.map((prediction) =>
+      prediction.classification_status === 'excluded'
+        ? { ...prediction, explanation: `Not classified: ${prediction.exclusion_reason}.`, supporting_signals: [], risk_note: 'Excluded by inference eligibility checks.' }
+        : addHeuristicExplanation(prediction),
+    );
+    const predictions = allPredictions.filter(
+      (prediction) => prediction.classification_status === 'classified',
+    );
     const classDistribution = output.metadata?.class_distribution ?? {};
     const suspicious = predictions
       .filter(isHighlightCandidate)
-      .sort((left, right) => right.confidence - left.confidence)
+      .sort((left, right) => (right.confidence ?? 0) - (left.confidence ?? 0))
       .slice(0, 10);
     const warnings = result.stderr ? ['The pipeline produced stderr output; open Debug details to review it.'] : [];
     return {
       run_id: runId,
       binary_name: basename(output.metadata?.binary ?? file.originalname),
       total_functions: output.metadata?.total_functions_predicted ?? predictions.length,
+      total_functions_extracted: output.metadata?.total_functions_extracted ?? predictions.length,
+      total_functions_classified: output.metadata?.total_functions_classified ?? output.metadata?.total_functions_predicted ?? predictions.length,
+      total_functions_excluded: output.metadata?.total_functions_excluded ?? 0,
       class_distribution: classDistribution,
       top_suspicious_functions: suspicious,
       predictions,
