@@ -35,6 +35,8 @@ ID2LABEL = {
     2: "Format String",
     3: "Integer Overflow",
 }
+DEFAULT_CONFIDENCE_THRESHOLD = 0.70
+UNCERTAIN_DISPLAY_LABEL = "Uncertain — Human review recommended"
 RUNTIME_OR_LIBRARY_FUNCTIONS = {
     "_start", "_init", "_fini", "_dl_relocate_static_pie", "deregister_tm_clones",
     "register_tm_clones", "__do_global_dtors_aux", "frame_dummy", "__libc_start_main",
@@ -62,6 +64,7 @@ def is_runtime_or_library_function(function_name: str) -> bool:
 def is_highlight_candidate(row: dict[str, Any]) -> bool:
     return (
         row.get("classification_status") == "classified"
+        and row.get("decision_status") == "accepted"
         and row.get("predicted_label") != 0
         and not is_runtime_or_library_function(row["function_name"])
     )
@@ -77,6 +80,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, help="Directory for Phase 11 outputs.")
     parser.add_argument("--max-length", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument(
+        "--confidence-threshold", type=float, default=DEFAULT_CONFIDENCE_THRESHOLD,
+        help="Minimum winning probability for an accepted class decision (default: 0.70).",
+    )
     parser.add_argument("--keep-temp", action="store_true", help="Keep the temporary Ghidra project directory.")
     parser.add_argument("--project-name", default="phase11_elf_demo", help="Temporary Ghidra project name.")
     parser.add_argument("--timeout", type=int, default=900, help="Ghidra timeout in seconds (default: 900).")
@@ -106,6 +113,8 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, Path]:
         raise Phase11Error("--max-length must be greater than zero.")
     if args.batch_size <= 0:
         raise Phase11Error("--batch-size must be greater than zero.")
+    if not 0.0 <= args.confidence_threshold <= 1.0:
+        raise Phase11Error("--confidence-threshold must be between 0 and 1.")
     if args.timeout <= 0:
         raise Phase11Error("--timeout must be greater than zero.")
     if args.top_k <= 0:
@@ -259,7 +268,7 @@ def load_model(model_dir: Path, device: torch.device) -> tuple[Any, Any]:
 
 def predict(
     records: list[dict[str, str]], tokenizer: Any, model: Any, device: torch.device,
-    max_length: int, batch_size: int,
+    max_length: int, batch_size: int, confidence_threshold: float,
 ) -> list[dict[str, Any]]:
 
     def collate(batch: list[dict[str, str]]) -> dict[str, Any]:
@@ -279,6 +288,8 @@ def predict(
             probabilities = torch.softmax(model(**inputs).logits, dim=-1).cpu().tolist()
             for row, scores in zip(rows, probabilities):
                 label = int(max(range(len(scores)), key=scores.__getitem__))
+                confidence = float(scores[label])
+                decision_status = "accepted" if confidence >= confidence_threshold else "uncertain"
                 predictions.append({
                     "binary_name": row["binary_name"], "binary_path": row["binary_path"],
                     "function_name": row["function_name"], "function_address": row["function_address"],
@@ -287,7 +298,8 @@ def predict(
                     "is_external": row.get("is_external", ""), "is_thunk": row.get("is_thunk", ""),
                     "classification_status": "classified", "exclusion_reason": "",
                     "predicted_label": label, "predicted_label_name": ID2LABEL[label],
-                    "confidence": float(scores[label]),
+                    "confidence": confidence, "decision_status": decision_status,
+                    "displayed_label_name": ID2LABEL[label] if decision_status == "accepted" else UNCERTAIN_DISPLAY_LABEL,
                     "probabilities": {ID2LABEL[index]: float(score) for index, score in enumerate(scores)},
                 })
     return predictions
@@ -302,23 +314,26 @@ def excluded_prediction(row: dict[str, str]) -> dict[str, Any]:
         "is_external": row.get("is_external", ""), "is_thunk": row.get("is_thunk", ""),
         "classification_status": "excluded", "exclusion_reason": row["exclusion_reason"],
         "predicted_label": None, "predicted_label_name": "Not classified",
-        "confidence": None, "probabilities": {},
+        "confidence": None, "decision_status": "excluded",
+        "displayed_label_name": "Not classified", "probabilities": {},
     }
 
 
 def save_outputs(
     predictions: list[dict[str, Any]], extracted_count: int, binary: Path,
-    model_dir: Path, output_dir: Path, device: torch.device,
+    model_dir: Path, output_dir: Path, device: torch.device, confidence_threshold: float,
 ) -> tuple[Path, Path, Path, Counter[str]]:
     csv_path = output_dir / "elf_predictions.csv"
     json_path = output_dir / "elf_predictions.json"
     markdown_path = output_dir / "summary.md"
     classified = [row for row in predictions if row["classification_status"] == "classified"]
     excluded = [row for row in predictions if row["classification_status"] == "excluded"]
-    distribution: Counter[str] = Counter(row["predicted_label_name"] for row in classified)
+    accepted = [row for row in classified if row["decision_status"] == "accepted"]
+    uncertain = [row for row in classified if row["decision_status"] == "uncertain"]
+    distribution: Counter[str] = Counter(row["predicted_label_name"] for row in accepted)
     exclusion_counts: Counter[str] = Counter(row["exclusion_reason"] for row in excluded)
 
-    csv_fields = ["binary_name", "binary_path", "function_name", "function_address", "memory_block", "is_external", "is_thunk", "classification_status", "exclusion_reason", "predicted_label", "predicted_label_name", "confidence", "function_code", "decompile_status"]
+    csv_fields = ["binary_name", "binary_path", "function_name", "function_address", "memory_block", "is_external", "is_thunk", "classification_status", "exclusion_reason", "decision_status", "displayed_label_name", "predicted_label", "predicted_label_name", "confidence", "function_code", "decompile_status"]
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=csv_fields)
         writer.writeheader()
@@ -329,7 +344,9 @@ def save_outputs(
         "phase": "Phase 11 ELF Prediction Demo", "binary": str(binary), "model_dir": str(model_dir),
         "device": str(device), "total_functions_extracted": extracted_count,
         "total_functions_classified": len(classified), "total_functions_excluded": len(excluded),
-        "total_functions_predicted": len(classified), "class_distribution": dict(distribution),
+        "total_functions_predicted": len(classified), "total_decisions_accepted": len(accepted),
+        "total_decisions_uncertain": len(uncertain), "confidence_threshold": confidence_threshold,
+        "class_distribution": dict(distribution),
         "exclusion_reasons": dict(exclusion_counts),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -342,9 +359,12 @@ def save_outputs(
         "# Phase 11 ELF Prediction Demo", "", f"- Binary analyzed: `{binary}`", f"- Model path: `{model_dir}`",
         f"- Device used: `{device}`", f"- Total functions extracted: {extracted_count}",
         f"- Total functions classified: {len(classified)}", f"- Total functions excluded: {len(excluded)}",
-        "", "## Class Distribution (Classified Functions Only)", "",
+        f"- Accepted decisions: {len(accepted)}", f"- Uncertain decisions: {len(uncertain)}",
+        f"- Confidence threshold: {confidence_threshold:.2f}",
+        "", "## Class Distribution (Accepted Decisions Only)", "",
     ]
     lines.extend(f"- {label}: {distribution.get(label, 0)}" for label in ID2LABEL.values())
+    lines.append(f"- Uncertain — Human review recommended: {len(uncertain)}")
     lines.extend(["", "## Excluded From Classification", ""])
     if exclusion_counts:
         lines.extend(f"- {reason}: {count}" for reason, count in exclusion_counts.most_common())
@@ -373,6 +393,7 @@ def print_banner(args: argparse.Namespace, device: torch.device) -> None:
     print(f"Ghidra home: {args.ghidra_home}")
     print(f"Output directory: {args.output_dir}")
     print(f"Max length: {args.max_length} | Batch size: {args.batch_size} | Device: {device}")
+    print(f"Confidence threshold: {args.confidence_threshold:.2f}")
 
 
 def print_summary(
@@ -382,6 +403,10 @@ def print_summary(
     print("\nClassification summary:")
     for label in ID2LABEL.values():
         print(f"{label}: {distribution.get(label, 0)}")
+    print(
+        "Uncertain — Human review recommended: "
+        f"{sum(row.get('decision_status') == 'uncertain' for row in predictions)}"
+    )
     print("\nTop vulnerability candidates:")
     suspicious = sorted(
         (row for row in predictions if is_highlight_candidate(row)),
@@ -442,7 +467,10 @@ def main() -> int:
         print(f"[INFO] Running on {device}")
         print("\n[5/6] Classifying functions...")
         print("[WORKING] Predicting vulnerability class per function...")
-        classified = predict(eligible, tokenizer, model, device, args.max_length, args.batch_size)
+        classified = predict(
+            eligible, tokenizer, model, device, args.max_length, args.batch_size,
+            args.confidence_threshold,
+        )
         classified_by_identity = {
             (row["function_address"], row["function_name"]): row for row in classified
         }
@@ -454,7 +482,10 @@ def main() -> int:
         ]
         print(f"[OK] {len(classified)} functions classified; {len(extracted) - len(classified)} excluded")
         print("\n[6/6] Writing reports...")
-        csv_path, json_path, markdown_path, distribution = save_outputs(predictions, len(extracted), binary, model_dir, output_dir, device)
+        csv_path, json_path, markdown_path, distribution = save_outputs(
+            predictions, len(extracted), binary, model_dir, output_dir, device,
+            args.confidence_threshold,
+        )
         print("[OK] CSV saved")
         print("[OK] JSON saved")
         print("[OK] Markdown summary saved")

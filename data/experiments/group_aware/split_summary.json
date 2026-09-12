@@ -1,0 +1,70 @@
+{
+  "input": "/home/drin/codebert-decompiled-vuln-classifier/data/processed/final_labeled_dataset.csv",
+  "seed": 42,
+  "grouping_rule": "remove terminal Juliet control-flow variant _01 through _18 from binary_name",
+  "target_class_counts": {
+    "train": [
+      182,
+      182,
+      182,
+      182
+    ],
+    "val": [
+      39,
+      39,
+      39,
+      39
+    ],
+    "test": [
+      39,
+      39,
+      39,
+      39
+    ]
+  },
+  "family_overlap": {
+    "train_val": 0,
+    "train_test": 0,
+    "val_test": 0
+  },
+  "binary_overlap": {
+    "train_val": 0,
+    "train_test": 0,
+    "val_test": 0
+  },
+  "rows": {
+    "test": 157,
+    "train": 728,
+    "val": 155
+  },
+  "families": {
+    "train": 43,
+    "val": 11,
+    "test": 14
+  },
+  "binaries": {
+    "train": 585,
+    "val": 129,
+    "test": 134
+  },
+  "class_counts": {
+    "test": {
+      "0": 39,
+      "1": 39,
+      "2": 40,
+      "3": 39
+    },
+    "train": {
+      "0": 182,
+      "1": 182,
+      "2": 182,
+      "3": 182
+    },
+    "val": {
+      "0": 39,
+      "1": 39,
+      "2": 38,
+      "3": 39
+    }
+  }
+}

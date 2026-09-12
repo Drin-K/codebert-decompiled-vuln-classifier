@@ -1,0 +1,85 @@
+{
+  "calibration_source": "/home/drin/codebert-decompiled-vuln-classifier/results/experiment_inference_filtering/uncertainty_calibration/validation_raw/codebert_test_predictions.csv",
+  "split_role": "validation only",
+  "total_validation_rows": 156,
+  "raw_validation_accuracy": 1.0,
+  "minimum_winning_confidence": 0.6575929522514343,
+  "selected_threshold": 0.7,
+  "selected_operating_point": {
+    "threshold": 0.7,
+    "accepted": 155,
+    "uncertain": 1,
+    "coverage": 0.9935897435897436,
+    "accepted_accuracy": 1.0
+  },
+  "threshold_table": [
+    {
+      "threshold": 0.4,
+      "accepted": 156,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.5,
+      "accepted": 156,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.6,
+      "accepted": 156,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.7,
+      "accepted": 155,
+      "uncertain": 1,
+      "coverage": 0.9935897435897436,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.75,
+      "accepted": 154,
+      "uncertain": 2,
+      "coverage": 0.9871794871794872,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.8,
+      "accepted": 151,
+      "uncertain": 5,
+      "coverage": 0.967948717948718,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.85,
+      "accepted": 149,
+      "uncertain": 7,
+      "coverage": 0.9551282051282052,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.9,
+      "accepted": 135,
+      "uncertain": 21,
+      "coverage": 0.8653846153846154,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.95,
+      "accepted": 102,
+      "uncertain": 54,
+      "coverage": 0.6538461538461539,
+      "accepted_accuracy": 1.0
+    }
+  ],
+  "limitations": [
+    "The original validation split was perfect and may share Juliet-family patterns with training.",
+    "The threshold must be reassessed on the future group-aware validation split.",
+    "Uncertain predictions are abstentions, not corrected model predictions."
+  ]
+}

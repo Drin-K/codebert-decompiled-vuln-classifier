@@ -35,6 +35,7 @@ All paths are resolved from the repository root unless absolute. Defaults are su
 | `SCRIPT_PATH` | `scripts/predict_elf.py` |
 | `MAX_LENGTH` | `512` |
 | `BATCH_SIZE` | `8` |
+| `CONFIDENCE_THRESHOLD` | `0.70` |
 | `ANALYSIS_TIMEOUT_MS` | `900000` |
 
 Uploads and generated web-demo runs remain local and are ignored by Git. The trained model is also intentionally local.

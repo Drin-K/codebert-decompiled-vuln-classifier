@@ -1,0 +1,15 @@
+{
+  "total_test_samples": 156,
+  "correct_predictions": 156,
+  "incorrect_predictions": 0,
+  "test_accuracy_recomputed": 1.0,
+  "per_class_error_counts": {
+    "Clean": 0,
+    "Buffer Overflow": 0,
+    "Format String": 0,
+    "Integer Overflow": 0
+  },
+  "confusion_pairs": {},
+  "number_of_misclassified_samples": 0,
+  "timestamp": "2026-09-12T19:18:49.504377+00:00"
+}

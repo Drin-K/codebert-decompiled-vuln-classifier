@@ -1,0 +1,50 @@
+{
+  "method": {
+    "family_key": "remove terminal Juliet control-flow variant _01 through _18 from binary_name",
+    "near_duplicate": "Jaccard similarity >= 0.90 over canonical token 5-shingles"
+  },
+  "rows": {
+    "train": 728,
+    "val": 155,
+    "test": 157
+  },
+  "binary_overlap": {
+    "train_val": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    },
+    "train_test": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    },
+    "val_test": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    }
+  },
+  "family_overlap": {
+    "train_val": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    },
+    "train_test": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    },
+    "val_test": {
+      "shared_groups": 0,
+      "affected_rows_in_second_split": 0
+    }
+  },
+  "exact_hash_overlap_groups": 0,
+  "near_duplicate_candidate_pairs": 390,
+  "rows_with_identifier_signals": {
+    "contains_good": 284,
+    "contains_bad": 787,
+    "good_to_bad_variant": 103,
+    "bad_to_good_variant": 146,
+    "sink_or_source_role": 201,
+    "cwe_identifier": 844,
+    "explicit_vulnerability_name": 844
+  }
+}

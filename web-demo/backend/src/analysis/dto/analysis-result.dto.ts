@@ -5,6 +5,8 @@ export interface PredictionDto {
   function_code: string;
   classification_status: 'classified' | 'excluded';
   exclusion_reason: string;
+  decision_status: 'accepted' | 'uncertain' | 'excluded';
+  displayed_label_name: string;
   predicted_label: number | null;
   predicted_label_name: string;
   confidence: number | null;
@@ -21,6 +23,7 @@ export interface AnalysisResultDto {
   total_functions_extracted: number;
   total_functions_classified: number;
   total_functions_excluded: number;
+  total_decisions_uncertain: number;
   class_distribution: Record<string, number>;
   top_suspicious_functions: PredictionDto[];
   predictions: PredictionDto[];

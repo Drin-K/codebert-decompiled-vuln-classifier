@@ -12,6 +12,7 @@ interface ScriptOutput {
     total_functions_extracted?: number;
     total_functions_classified?: number;
     total_functions_excluded?: number;
+    total_decisions_uncertain?: number;
     total_functions_predicted?: number;
     class_distribution?: Record<string, number>;
   };
@@ -36,7 +37,7 @@ const isHighlightCandidate = (prediction: PredictionDto) => {
   const nonUserFunction = runtimeOrLibraryFunctions.has(name) || name.startsWith('__') ||
     name.startsWith('thunk_') || name.startsWith('plt_') ||
     name.startsWith('imp_') || name.endsWith('@plt');
-  return prediction.classification_status === 'classified' && prediction.predicted_label !== 0 && !nonUserFunction;
+  return prediction.classification_status === 'classified' && prediction.decision_status === 'accepted' && prediction.predicted_label !== 0 && !nonUserFunction;
 };
 
 @Injectable()
@@ -61,6 +62,7 @@ export class AnalysisService {
       '--output-dir', outputDir,
       '--max-length', String(config.maxLength),
       '--batch-size', String(config.batchSize),
+      '--confidence-threshold', String(config.confidenceThreshold),
     ];
     const result = await this.runPython(config.pythonBin, args, config.timeoutMs);
     if (result.exitCode !== 0 || result.timedOut) {
@@ -98,6 +100,8 @@ export class AnalysisService {
     const allPredictions = output.predictions.map((prediction) =>
       prediction.classification_status === 'excluded'
         ? { ...prediction, explanation: `Not classified: ${prediction.exclusion_reason}.`, supporting_signals: [], risk_note: 'Excluded by inference eligibility checks.' }
+        : prediction.decision_status === 'uncertain'
+          ? { ...prediction, explanation: `The model's highest probability was ${prediction.predicted_label_name} at ${((prediction.confidence ?? 0) * 100).toFixed(2)}%, below the acceptance threshold.`, supporting_signals: [], risk_note: 'Uncertain — Human review recommended.' }
         : addHeuristicExplanation(prediction),
     );
     const predictions = allPredictions.filter(
@@ -116,6 +120,7 @@ export class AnalysisService {
       total_functions_extracted: output.metadata?.total_functions_extracted ?? predictions.length,
       total_functions_classified: output.metadata?.total_functions_classified ?? output.metadata?.total_functions_predicted ?? predictions.length,
       total_functions_excluded: output.metadata?.total_functions_excluded ?? 0,
+      total_decisions_uncertain: output.metadata?.total_decisions_uncertain ?? 0,
       class_distribution: classDistribution,
       top_suspicious_functions: suspicious,
       predictions,
@@ -149,6 +154,7 @@ export class AnalysisService {
       scriptPath: fromRoot(process.env.SCRIPT_PATH ?? 'scripts/predict_elf.py'),
       maxLength: Number(process.env.MAX_LENGTH ?? 512),
       batchSize: Number(process.env.BATCH_SIZE ?? 8),
+      confidenceThreshold: Number(process.env.CONFIDENCE_THRESHOLD ?? 0.70),
       timeoutMs: Number(process.env.ANALYSIS_TIMEOUT_MS ?? 900000),
     };
   }
@@ -160,6 +166,7 @@ export class AnalysisService {
     if (!existsSync(config.ghidraHome)) throw new BadRequestException(`Ghidra home directory was not found: ${config.ghidraHome}`);
     if (!Number.isInteger(config.maxLength) || config.maxLength <= 0) throw new BadRequestException('MAX_LENGTH must be a positive integer.');
     if (!Number.isInteger(config.batchSize) || config.batchSize <= 0) throw new BadRequestException('BATCH_SIZE must be a positive integer.');
+    if (!Number.isFinite(config.confidenceThreshold) || config.confidenceThreshold < 0 || config.confidenceThreshold > 1) throw new BadRequestException('CONFIDENCE_THRESHOLD must be between 0 and 1.');
   }
 
   private assertElf(filePath: string) {
