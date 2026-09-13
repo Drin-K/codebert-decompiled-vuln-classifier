@@ -1,0 +1,85 @@
+{
+  "calibration_source": "/home/drin/codebert-decompiled-vuln-classifier/results/experiment_group_aware/uncertainty_calibration/validation_raw/codebert_test_predictions.csv",
+  "split_role": "validation only",
+  "total_validation_rows": 155,
+  "raw_validation_accuracy": 0.9870967741935484,
+  "minimum_winning_confidence": 0.6665998697280884,
+  "selected_threshold": 0.7,
+  "selected_operating_point": {
+    "threshold": 0.7,
+    "accepted": 152,
+    "uncertain": 3,
+    "coverage": 0.9806451612903225,
+    "accepted_accuracy": 1.0
+  },
+  "threshold_table": [
+    {
+      "threshold": 0.4,
+      "accepted": 155,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 0.9870967741935484
+    },
+    {
+      "threshold": 0.5,
+      "accepted": 155,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 0.9870967741935484
+    },
+    {
+      "threshold": 0.6,
+      "accepted": 155,
+      "uncertain": 0,
+      "coverage": 1.0,
+      "accepted_accuracy": 0.9870967741935484
+    },
+    {
+      "threshold": 0.7,
+      "accepted": 152,
+      "uncertain": 3,
+      "coverage": 0.9806451612903225,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.75,
+      "accepted": 148,
+      "uncertain": 7,
+      "coverage": 0.9548387096774194,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.8,
+      "accepted": 144,
+      "uncertain": 11,
+      "coverage": 0.9290322580645162,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.85,
+      "accepted": 136,
+      "uncertain": 19,
+      "coverage": 0.8774193548387097,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.9,
+      "accepted": 124,
+      "uncertain": 31,
+      "coverage": 0.8,
+      "accepted_accuracy": 1.0
+    },
+    {
+      "threshold": 0.95,
+      "accepted": 73,
+      "uncertain": 82,
+      "coverage": 0.47096774193548385,
+      "accepted_accuracy": 1.0
+    }
+  ],
+  "limitations": [
+    "The original validation split was perfect and may share Juliet-family patterns with training.",
+    "The threshold must be reassessed on the future group-aware validation split.",
+    "Uncertain predictions are abstentions requiring human review, not corrected model predictions."
+  ]
+}

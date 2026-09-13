@@ -14,7 +14,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BOILERPLATE_FUNCTION_NAMES = {
     "_init",
     "_fini",
+    "_DT_INIT",
+    "_FINI_0",
+    "_DT_FINI",
     "_start",
+    "entry",
     "_dl_relocate_static_pie",
     "_global_offset_table_",
     "__libc_start_main",

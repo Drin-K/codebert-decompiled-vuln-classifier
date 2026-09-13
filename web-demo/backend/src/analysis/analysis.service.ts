@@ -149,7 +149,7 @@ export class AnalysisService {
     return {
       pythonBin: fromRoot(process.env.PYTHON_BIN ?? '.venv/bin/python'),
       ghidraHome: fromRoot(process.env.GHIDRA_HOME ?? '/opt/ghidra'),
-      modelDir: fromRoot(process.env.MODEL_DIR ?? 'models/codebert-final'),
+      modelDir: fromRoot(process.env.MODEL_DIR ?? 'models/codebert-group-aware'),
       outputRoot: fromRoot(process.env.OUTPUT_ROOT ?? 'results/web_demo'),
       scriptPath: fromRoot(process.env.SCRIPT_PATH ?? 'scripts/predict_elf.py'),
       maxLength: Number(process.env.MAX_LENGTH ?? 512),

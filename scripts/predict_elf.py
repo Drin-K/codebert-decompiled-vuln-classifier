@@ -38,7 +38,8 @@ ID2LABEL = {
 DEFAULT_CONFIDENCE_THRESHOLD = 0.70
 UNCERTAIN_DISPLAY_LABEL = "Uncertain — Human review recommended"
 RUNTIME_OR_LIBRARY_FUNCTIONS = {
-    "_start", "_init", "_fini", "_dl_relocate_static_pie", "deregister_tm_clones",
+    "_start", "_init", "_fini", "_dt_init", "_fini_0", "_dt_fini", "entry",
+    "_dl_relocate_static_pie", "deregister_tm_clones",
     "register_tm_clones", "__do_global_dtors_aux", "frame_dummy", "__libc_start_main",
     "__cxa_finalize", "__stack_chk_fail", "__gmon_start__", "_global_offset_table_",
 }
